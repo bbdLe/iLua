@@ -1,2 +1,4 @@
 log/*.log
 .idea
+cmd.exe
+hello_world.out
