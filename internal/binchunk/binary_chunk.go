@@ -72,4 +72,6 @@ type binaryChunk struct {
 func Undump(data []byte) {
 	reader := reader{data: data}
 	reader.checkHeader()
+	reader.readByte()
+	reader.readProto("")
 }

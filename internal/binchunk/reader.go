@@ -91,3 +91,107 @@ func (self *reader) checkHeader() {
 	}
 	log.Logger.Info("check success")
 }
+
+func (self *reader) readProto(parentSource string) *Prototype {
+	source := self.readString()
+	if source == "" {
+		source = parentSource
+	}
+	return &Prototype{
+		source:         source,
+		LineDefine:     self.readUint32(),
+		LastLineDefine: self.readUint32(),
+		NumParams:      self.readByte(),
+		IsVararg:       self.readByte(),
+		MaxStackSize:   self.readByte(),
+		Code:           self.readCode(),
+		Constants:      self.readConstants(),
+		Upvalues:       self.readUpValues(),
+		Protos:         self.readProtos(source),
+		LineInfo:       self.readLineInfo(),
+		LocVars:        self.readLocVars(),
+		UpvalueNames:   self.readUpValueNames(),
+	}
+}
+
+func (self *reader) readCode() []uint32 {
+	codes := make([]uint32, self.readUint32())
+	for i := range codes {
+		codes[i] = self.readUint32()
+	}
+	return codes
+}
+
+func (self *reader) readConstants() []interface{} {
+	constants := make([]interface{}, self.readUint32())
+	for i := range constants {
+		constants[i] = self.readConstant()
+	}
+
+	return constants
+}
+
+func (self *reader) readConstant() interface{} {
+	switch self.readByte() {
+	case TAG_NIL:
+		return nil
+	case TAG_BOOLEAN:
+		return self.readByte() != 0
+	case TAG_INTEGER:
+		return self.readLuaInteger()
+	case TAG_NUMBER:
+		return self.readLuaNumber()
+	case TAG_LONG_STR, TAG_SHORT_STR:
+		return self.readString()
+	default:
+		log.Logger.Fatal("unknown constant type!")
+		return nil
+	}
+}
+
+func (self *reader) readUpValues() []Upvalue {
+	upvalues := make([]Upvalue, self.readUint32())
+	for i := range upvalues {
+		upvalues[i] = Upvalue{
+			Instack: self.readByte(),
+			Idx:     self.readByte(),
+		}
+	}
+	return upvalues
+}
+
+func (self *reader) readProtos(source string) []*Prototype {
+	protos := make([]*Prototype, self.readUint32())
+	for i := range protos {
+		protos[i] = self.readProto(source)
+	}
+	return protos
+}
+
+func (self *reader) readLineInfo() []uint32 {
+	lineInfos := make([]uint32, self.readUint32())
+	for i := range lineInfos {
+		lineInfos[i] = self.readUint32()
+	}
+	return lineInfos
+}
+
+func (self *reader) readLocVars() []LocVar {
+	locVars := make([]LocVar, self.readUint32())
+	for i := range locVars {
+		locVars[i] = LocVar{
+			VarName: self.readString(),
+			StartPC: self.readUint32(),
+			EndPC:   self.readUint32(),
+		}
+	}
+	return locVars
+}
+
+func (self *reader) readUpValueNames() []string {
+	names := make([]string, self.readUint32())
+	for i := range names {
+		names[i] = self.readString()
+	}
+	return names
+}
