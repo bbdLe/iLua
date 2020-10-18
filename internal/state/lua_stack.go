@@ -23,6 +23,11 @@ func (self *luaStack) check(n int) {
 	}
 }
 
+func (self *luaStack) isValid(idx int) bool {
+	absIdx := self.absIndex(idx)
+	return absIdx > 0 && absIdx <= self.top
+}
+
 func (self *luaStack) push(val luaValue) {
 	if self.top == len(self.slots) {
 		log.Logger.Fatal("stack overflow!")
