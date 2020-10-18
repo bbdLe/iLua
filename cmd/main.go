@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"io/ioutil"
+
 	"github.com/bbdLe/iLua/internal/binchunk"
 	"github.com/bbdLe/iLua/internal/log"
 	"go.uber.org/zap"
-	"io/ioutil"
 )
 
 func main() {
@@ -13,5 +15,84 @@ func main() {
 	if err != nil {
 		log.Logger.Fatal("read file fail", zap.Error(err))
 	}
-	binchunk.Undump(data)
+	p := binchunk.Undump(data)
+	list(p)
+}
+
+func list(p *binchunk.Prototype) {
+	printHeader(p)
+	printCode(p)
+	printDetail(p)
+
+	for _, proto := range p.Protos {
+		list(proto)
+	}
+}
+
+func printHeader(p *binchunk.Prototype) {
+	funcType := "main"
+	if p.LineDefine > 0 {
+		funcType = "function"
+	}
+
+	varargFlag := ""
+	if p.IsVararg > 0 {
+		varargFlag = "+"
+	}
+
+	fmt.Printf("\n%s <%s:%d,%d> (%d instructions)\n", funcType, p.Source, p.LineDefine, p.LastLineDefine, len(p.Code))
+	fmt.Printf("%d%s params, %d slots, %d upvalues, ", p.NumParams, varargFlag, p.MaxStackSize, len(p.Upvalues))
+	fmt.Printf("%d locals, %d constants, %d functions\n", len(p.LocVars), len(p.Constants), len(p.Protos))
+}
+
+func printCode(p *binchunk.Prototype) {
+	for pc, c := range p.Code {
+		line := "-"
+		if len(p.LineInfo) > 0 {
+			line = fmt.Sprintf("%d", p.LineInfo[pc])
+		}
+		fmt.Printf("\t%d\t[%s]\t0x%08X\n", pc+1, line, c)
+	}
+}
+
+func printDetail(p *binchunk.Prototype) {
+	fmt.Printf("constants (%d):\n", len(p.Constants))
+	for i, k := range p.Constants {
+		fmt.Printf("\t%d\t%s\n", i+1, constantToString(k))
+	}
+
+	fmt.Printf("locals (%d):\n", len(p.LocVars))
+	for i, localVar := range p.LocVars {
+		fmt.Printf("\t%d\t%s\t%d\t%d\n", i+1, localVar.VarName, localVar.StartPC, localVar.EndPC)
+	}
+
+	fmt.Printf("upvalues (%d):\n", len(p.Upvalues))
+	for i, upvalue := range p.Upvalues {
+		fmt.Printf("\t%d\t%s\t%d\t%d\n", i+1, upvalName(p, i), upvalue.Idx, upvalue.Instack)
+	}
+}
+
+func constantToString(k interface{}) string {
+	switch k.(type) {
+	case nil:
+		return "nil"
+	case bool:
+		return fmt.Sprintf("%t", k)
+	case float64:
+		return fmt.Sprintf("%g", k)
+	case int64:
+		return fmt.Sprintf("%d", k)
+	case string:
+		return fmt.Sprintf("%q", k)
+	default:
+		return "?"
+	}
+}
+
+func upvalName(p *binchunk.Prototype, idx int) string {
+	if len(p.UpvalueNames) > 0 {
+		return p.UpvalueNames[idx]
+	} else {
+		return "-"
+	}
 }

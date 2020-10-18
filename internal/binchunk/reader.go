@@ -98,7 +98,7 @@ func (self *reader) readProto(parentSource string) *Prototype {
 		source = parentSource
 	}
 	return &Prototype{
-		source:         source,
+		Source:         source,
 		LineDefine:     self.readUint32(),
 		LastLineDefine: self.readUint32(),
 		NumParams:      self.readByte(),

@@ -49,7 +49,7 @@ type LocVar struct {
 }
 
 type Prototype struct {
-	source         string
+	Source         string
 	LineDefine     uint32
 	LastLineDefine uint32
 	NumParams      byte
@@ -69,9 +69,9 @@ type binaryChunk struct {
 	sizeUpValues byte
 }
 
-func Undump(data []byte) {
+func Undump(data []byte) *Prototype {
 	reader := reader{data: data}
 	reader.checkHeader()
 	reader.readByte()
-	reader.readProto("")
+	return reader.readProto("")
 }
